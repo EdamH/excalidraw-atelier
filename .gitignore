@@ -1,0 +1,45 @@
+# ---------- Dependencies ----------
+node_modules/
+
+# ---------- Build output ----------
+dist/
+build/
+*.tsbuildinfo
+
+# Vite emits these from vite.config.ts when tsc runs — never commit them.
+frontend/vite.config.d.ts
+frontend/vite.config.js
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- Env files ----------
+# Real credentials never live in git. docker-compose.yml uses inline dev
+# values; anything else (local overrides, personal secrets) stays out.
+.env
+.env.*
+!.env.example
+
+# ---------- Claude Code ----------
+.claude/
+
+# ---------- Editor / OS ----------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---------- Coverage / test artifacts ----------
+coverage/
+.nyc_output/
+
+# ---------- Docker / local state ----------
+# docker-compose named volumes live outside the tree, but just in case
+# someone mounts a bind-mount for mongo-data locally:
+mongo-data/

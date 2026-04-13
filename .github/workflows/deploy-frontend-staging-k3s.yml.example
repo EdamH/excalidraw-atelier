@@ -1,0 +1,62 @@
+# .github/workflows/deploy-frontend-staging-k3s.yml
+name: "[STAGING] Deploy Excalidraw Frontend to k3s"
+
+on:
+    push:
+        paths:
+            - "frontend/**"
+            - "infra/excalidraw-frontend.staging.yaml"
+            - ".github/workflows/deploy-frontend-staging-k3s.yml"
+        branches:
+            - staging
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    deploy-on-k3s:
+        runs-on: [self-hosted, staging-runner]
+
+        env:
+            IMAGE_TAG: staging
+            NAMESPACE: default
+            DEPLOYMENT: excalidraw-frontend
+            KUBECONFIG_FILE: ./kubeconfig
+
+        steps:
+            - name: Checkout 📦
+              uses: actions/checkout@v4
+
+            - name: Install kubectl
+              uses: azure/setup-kubectl@v4
+              with:
+                  # set within N-1 / N / N+1 of your cluster version
+                  version: v1.29.7
+
+            - name: Write kubeconfig for k3s 🔑
+              run: |
+                  echo "${{ secrets.K3S_KUBECONFIG }}" > "$KUBECONFIG_FILE"
+                  chmod 600 "$KUBECONFIG_FILE"
+
+            - name: Verify cluster access 🔎
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" cluster-info
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" get nodes -o wide
+
+            - name: Build Excalidraw frontend staging image 🛠️
+              # VITE_API_URL is intentionally empty so the SPA calls relative /api/*
+              # and openresty proxies to excalidraw-backend-service.
+              run: |
+                  docker build --build-arg VITE_API_URL="" --build-arg VITE_ENABLE_COLLAB="true" -t excalidraw-frontend:staging ./frontend
+                  docker tag excalidraw-frontend:staging localhost:5000/excalidraw-frontend:staging
+                  docker push localhost:5000/excalidraw-frontend:staging
+
+            - name: Apply manifests 📋
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" apply -f infra/excalidraw-frontend.staging.yaml
+
+            - name: Rollout restart 🔄
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$NAMESPACE" rollout restart deployment "$DEPLOYMENT"
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$NAMESPACE" rollout status deployment "$DEPLOYMENT" --timeout=180s

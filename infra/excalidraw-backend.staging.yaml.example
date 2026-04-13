@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: excalidraw-backend-config
+    namespace: default
+    labels:
+        app: excalidraw-backend
+data:
+    NODE_ENV: staging
+    PORT: "4000"
+    DB_HOST: your-mongodb-host
+    DB_NAME: excalidraw
+    FRONTEND_ORIGIN: https://excalidraw.yourdomain.com
+    ENABLE_COLLAB: "true"
+---
+# =============================================================================
+# The `excalidraw-backend-secret` is a one-time manual bootstrap, NOT managed
+# by this manifest or by CI. Credentials must never travel through git or CI
+# logs, so — matching the house pattern — the Secret is created out-of-band
+# once and then referenced via `envFrom: secretRef:`.
+#
+# To create it on a fresh cluster:
+#
+#   kubectl -n default create secret generic excalidraw-backend-secret \
+#     --from-literal=DB_USERNAME=your-db-user \
+#     --from-literal=DB_PASSWORD=your-db-password \
+#     --from-literal=JWT_SECRET=$(openssl rand -hex 32) \
+#     --from-literal=ADMIN_EMAILS=admin@example.com
+#
+# The deploy-backend-staging-k3s.yml workflow fails fast with instructions if
+# this Secret is missing, so a forgotten bootstrap won't silently CrashLoop.
+# =============================================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    labels:
+        app: excalidraw-backend
+    name: excalidraw-backend
+    namespace: default
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: excalidraw-backend
+    template:
+        metadata:
+            labels:
+                app: excalidraw-backend
+        spec:
+            tolerations:
+                - effect: NoSchedule
+                  key: dedicated
+                  operator: Equal
+                  value: server
+            containers:
+                - name: excalidraw-backend
+                  image: localhost:5000/excalidraw-backend:staging
+                  imagePullPolicy: Always
+                  ports:
+                      - containerPort: 4000
+                  envFrom:
+                      - configMapRef:
+                            name: excalidraw-backend-config
+                      - secretRef:
+                            name: excalidraw-backend-secret
+                  resources:
+                      requests:
+                          cpu: 50m
+                          memory: 128Mi
+                      limits:
+                          cpu: 200m
+                          memory: 384Mi
+                  securityContext:
+                      capabilities:
+                          drop:
+                              - NET_RAW
+                  startupProbe:
+                      httpGet:
+                          path: /healthz
+                          port: 4000
+                          scheme: HTTP
+                      initialDelaySeconds: 10
+                      periodSeconds: 5
+                      failureThreshold: 12
+                  readinessProbe:
+                      httpGet:
+                          path: /healthz
+                          port: 4000
+                          scheme: HTTP
+                      periodSeconds: 5
+                      failureThreshold: 2
+                  livenessProbe:
+                      httpGet:
+                          path: /healthz
+                          port: 4000
+                          scheme: HTTP
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                      failureThreshold: 3
+                  lifecycle:
+                      preStop:
+                          exec:
+                              command: ["sh", "-c", "sleep 10"]
+            terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+    labels:
+        app: excalidraw-backend
+    name: excalidraw-backend-service
+    namespace: default
+spec:
+    ports:
+        - port: 4000
+          protocol: TCP
+          targetPort: 4000
+    selector:
+        app: excalidraw-backend
+    type: ClusterIP
+    sessionAffinity: None
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+    name: excalidraw-backend-pdb
+    namespace: default
+spec:
+    maxUnavailable: 1
+    selector:
+        matchLabels:
+            app: excalidraw-backend

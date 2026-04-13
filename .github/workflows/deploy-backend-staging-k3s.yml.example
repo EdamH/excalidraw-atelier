@@ -1,0 +1,73 @@
+# .github/workflows/deploy-backend-staging-k3s.yml
+name: "[STAGING] Deploy Excalidraw Backend to k3s"
+
+on:
+    push:
+        paths:
+            - "backend/**"
+            - "infra/excalidraw-backend.staging.yaml"
+            - ".github/workflows/deploy-backend-staging-k3s.yml"
+        branches:
+            - staging
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    deploy-on-k3s:
+        runs-on: [self-hosted, staging-runner]
+
+        env:
+            IMAGE_TAG: staging
+            NAMESPACE: default
+            DEPLOYMENT: excalidraw-backend
+            KUBECONFIG_FILE: ./kubeconfig
+
+        steps:
+            - name: Checkout 📦
+              uses: actions/checkout@v4
+
+            - name: Install kubectl
+              uses: azure/setup-kubectl@v4
+              with:
+                  # set within N-1 / N / N+1 of your cluster version
+                  version: v1.29.7
+
+            - name: Write kubeconfig for k3s 🔑
+              run: |
+                  echo "${{ secrets.K3S_KUBECONFIG }}" > "$KUBECONFIG_FILE"
+                  chmod 600 "$KUBECONFIG_FILE"
+
+            - name: Verify cluster access 🔎
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" cluster-info
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" get nodes -o wide
+
+            - name: Ensure bootstrap Secret exists 🛡️
+              run: |
+                  if ! kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$NAMESPACE" get secret excalidraw-backend-secret >/dev/null 2>&1; then
+                    echo "::error::excalidraw-backend-secret not found in namespace $NAMESPACE."
+                    echo "::error::This is a one-time manual bootstrap. Create it with:"
+                    echo "::error::  kubectl -n default create secret generic excalidraw-backend-secret \\"
+                    echo "::error::    --from-literal=DB_USERNAME=your-db-user \\"
+                    echo "::error::    --from-literal=DB_PASSWORD=your-db-password \\"
+                    echo "::error::    --from-literal=JWT_SECRET=\$(openssl rand -hex 32) \\"
+                    echo "::error::    --from-literal=ADMIN_EMAILS=<comma-separated-admin-emails>"
+                    exit 1
+                  fi
+
+            - name: Build Excalidraw backend staging image 🛠️
+              run: |
+                  docker build -t excalidraw-backend:staging ./backend
+                  docker tag excalidraw-backend:staging localhost:5000/excalidraw-backend:staging
+                  docker push localhost:5000/excalidraw-backend:staging
+
+            - name: Apply manifests 📋
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" apply -f infra/excalidraw-backend.staging.yaml
+
+            - name: Rollout restart 🔄
+              run: |
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$NAMESPACE" rollout restart deployment "$DEPLOYMENT"
+                  kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$NAMESPACE" rollout status deployment "$DEPLOYMENT" --timeout=180s

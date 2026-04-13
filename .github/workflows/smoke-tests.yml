@@ -1,0 +1,44 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-tests:
+    runs-on: [self-hosted, staging-runner]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Start services
+        run: |
+          docker compose up -d --build --wait
+        timeout-minutes: 5
+
+      - name: Seed test users
+        run: |
+          docker compose exec -T backend node dist/scripts/createUser.js alice@team.com pw Alice
+          docker compose exec -T backend node dist/scripts/createUser.js bob@team.com pw Bob
+          docker compose exec -T backend node dist/scripts/createUser.js carol@team.com pw Carol
+
+      - name: Run all smoke tests
+        run: node smoke-tests/run-all.mjs
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --paper: #faf7f0;
+    --paper-deep: #f2ede0;
+    --ink: #1a0e2e;
+    --ink-soft: #4b3768;
+    --ink-fade: #8c7fa3;
+    --plum: #682eb0;
+    --plum-deep: #3e1c6a;
+    --plum-haze: #efe7fa;
+    --gold: #ffd701;
+    --gold-deep: #a67102;
+    --rule: rgba(26, 14, 46, 0.15);
+    --destructive: #c0392b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    font-family:
+      "Inter",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+    background-color: var(--paper);
+    color: var(--ink-soft);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "ss02", "cv11";
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+  }
+
+  ::selection {
+    background: var(--gold);
+    color: var(--ink);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--ink);
+  }
+}
+
+@layer utilities {
+  .hairline {
+    border-color: rgba(26, 14, 46, 0.15);
+  }
+
+  .tooltip-host {
+    position: relative;
+  }
+  .tooltip-host:hover > .tooltip-bubble,
+  .tooltip-host:focus-visible > .tooltip-bubble {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  .tooltip-bubble {
+    pointer-events: none;
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 8px);
+    transform: translate(-50%, 4px);
+    opacity: 0;
+    transition:
+      opacity 140ms ease-out,
+      transform 140ms ease-out;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--rule);
+    white-space: nowrap;
+    z-index: 60;
+  }
+
+  .grain-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Konami Code — Brutalist Mode override */
+  .brutalist-mode body {
+    background-color: #0a0a0a !important;
+    color: #39FF14 !important;
+  }
+  .brutalist-mode body::before {
+    opacity: 0.08;
+    mix-blend-mode: screen;
+  }
+  .brutalist-mode ::selection {
+    background: #39FF14;
+    color: #0a0a0a;
+  }
+  .brutalist-mode h1,
+  .brutalist-mode h2,
+  .brutalist-mode h3,
+  .brutalist-mode h4 {
+    color: #39FF14 !important;
+    font-style: normal !important;
+    font-family: "JetBrains Mono", ui-monospace, monospace !important;
+    text-transform: uppercase;
+  }
+  .brutalist-mode .bg-paper {
+    background-color: #0a0a0a !important;
+  }
+  .brutalist-mode .bg-paper-deep {
+    background-color: #111 !important;
+  }
+  .brutalist-mode .bg-ink {
+    background-color: #39FF14 !important;
+    color: #0a0a0a !important;
+  }
+  .brutalist-mode .text-ink,
+  .brutalist-mode .text-ink-soft,
+  .brutalist-mode .text-ink-fade {
+    color: #39FF14 !important;
+  }
+  .brutalist-mode .text-paper {
+    color: #0a0a0a !important;
+  }
+  .brutalist-mode .border-rule {
+    border-color: rgba(57, 255, 20, 0.3) !important;
+  }
+  .brutalist-mode .bg-plum {
+    background-color: #39FF14 !important;
+    color: #0a0a0a !important;
+  }
+  .brutalist-mode .text-plum {
+    color: #39FF14 !important;
+  }
+  .brutalist-mode .bg-gold {
+    background-color: #ff00ff !important;
+  }
+  .brutalist-mode .text-gold {
+    color: #ff00ff !important;
+  }
+
+  @keyframes brutalist-reveal {
+    0% { opacity: 0; transform: translate(-50%, -20px) scaleX(0.3); }
+    60% { opacity: 1; transform: translate(-50%, 0) scaleX(1.05); }
+    100% { opacity: 1; transform: translate(-50%, 0) scaleX(1); }
+  }
+  .animate-brutalist-reveal {
+    animation: brutalist-reveal 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+}
