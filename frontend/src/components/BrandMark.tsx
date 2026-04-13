@@ -1,4 +1,4 @@
-import logo from "../assets/converty-minimized.svg";
+import logo from "../assets/logo.svg";
 import { cn } from "../lib/cn";
 
 interface BrandMarkProps {
